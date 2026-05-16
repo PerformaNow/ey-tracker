@@ -665,17 +665,25 @@ function LogisticsPage({ logistics, setLogistics }) {
           'kettal': 'kettal', 'transit_cabfreight': 'transit_cabfreight',
           'cabfreight': 'cabfreight', 'transit_ey': 'transit_ey', 'ey_building': 'ey_building'
         };
-        const newItems = rows.map((row, i) => ({
-          id:              Date.now().toString() + i,
-          reference:       String(row['Referencia']    || '').trim(),
-          expedicion:      String(row['Num_Expedicion'] || '').trim(),
-          description:     String(row['Descripcion']   || '').trim(),
-          floor:           String(row['Planta']        || 'all').trim(),
-          location:        LOC_MAP[String(row['Ubicacion'] || '').trim()] || 'kettal',
-          plannedLocation: LOC_MAP[String(row['Destino']   || '').trim()] || 'ey_building',
-          plannedDate:     String(row['Fecha_Entrega'] || '').trim(),
-          notes:           String(row['Notas']         || '').trim(),
-        })).filter(r => r.reference);
+        const newItems = rows.flatMap((row, i) => {
+          const ref      = String(row['Referencia']    || '').trim();
+          if (!ref) return [];
+          const qty      = Math.max(1, parseInt(row['Cantidad'] || '1') || 1);
+          const base = {
+            expedicion:      String(row['Num_Expedicion'] || '').trim(),
+            description:     String(row['Descripcion']   || '').trim(),
+            floor:           String(row['Planta']        || 'all').trim(),
+            location:        LOC_MAP[String(row['Ubicacion'] || '').trim()] || 'kettal',
+            plannedLocation: LOC_MAP[String(row['Destino']   || '').trim()] || 'ey_building',
+            plannedDate:     String(row['Fecha_Entrega'] || '').trim(),
+            notes:           String(row['Notas']         || '').trim(),
+          };
+          return Array.from({ length: qty }, (_, k) => ({
+            ...base,
+            id:        Date.now().toString() + i + k,
+            reference: qty > 1 ? `${ref}-${k + 1}` : ref,
+          }));
+        });
         if (newItems.length === 0) { alert('No se encontraron filas válidas. Revisa que la columna "Referencia" esté rellena.'); return; }
         persist([...logistics, ...newItems]);
         alert(`✅ ${newItems.length} paquete(s) importados correctamente.`);
