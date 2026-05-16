@@ -512,11 +512,24 @@ function FloorsPage({ rs, setRS, images, setImages }) {
   );
 }
 
+
+// ─── Shared form helpers (must be outside page components to avoid remount) ──
+const INP_CLS = "w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 transition-all bg-white";
+function FormField({ label, children }) {
+  return (
+    <div>
+      <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">{label}</label>
+      {children}
+    </div>
+  );
+}
+
 // ─── Incidents Page ───────────────────────────────────────────────────────────
 function IncidentsPage({ incidents, setIncidents }) {
   const [showForm,  setShowForm]  = useState(false);
   const [fltStatus, setFltStatus] = useState('all');
   const [fltFloor,  setFltFloor]  = useState('all');
+  const [editInc,   setEditInc]   = useState(null);
   const blankForm = { floor: 1, room: '', description: '', severity: 'medium', status: 'open', reporter: '', date: new Date().toISOString().split('T')[0] };
   const [form, setForm] = useState(blankForm);
 
@@ -526,7 +539,8 @@ function IncidentsPage({ incidents, setIncidents }) {
     persist([...incidents, { ...form, id: Date.now().toString(), floor: +form.floor }]);
     setForm(blankForm); setShowForm(false);
   };
-  const del = id => { if (confirm('¿Eliminar incidencia?')) persist(incidents.filter(i => i.id !== id)); };
+  const del     = id  => { if (confirm('¿Eliminar incidencia?')) persist(incidents.filter(i => i.id !== id)); };
+  const saveEdit = (updated) => { persist(incidents.map(i => i.id === updated.id ? updated : i)); setEditInc(null); };
   const setStatus = (id, s) => persist(incidents.map(i => i.id === id ? { ...i, status: s } : i));
 
   const list = [...incidents]
@@ -534,10 +548,7 @@ function IncidentsPage({ incidents, setIncidents }) {
     .filter(i => fltFloor  === 'all' || i.floor === +fltFloor)
     .reverse();
 
-  const F = ({ label, children }) => (
-    <div><label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">{label}</label>{children}</div>
-  );
-  const inp = "w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 transition-all bg-white";
+
 
   return (
     <div className="p-7 space-y-6 fade-in">
@@ -556,31 +567,31 @@ function IncidentsPage({ incidents, setIncidents }) {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 fade-in">
           <p className="font-semibold text-gray-800 mb-4">Nueva Incidencia</p>
           <div className="grid grid-cols-2 gap-4">
-            <F label="Planta">
-              <select value={form.floor} onChange={e => setForm(f => ({ ...f, floor: e.target.value }))} className={inp}>
+            <FormField label="Planta">
+              <select value={form.floor} onChange={e => setForm(f => ({ ...f, floor: e.target.value }))} className={INP_CLS}>
                 {FLOORS.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
               </select>
-            </F>
-            <F label="Sala / Zona">
+            </FormField>
+            <FormField label="Sala / Zona">
               <input value={form.room} onChange={e => setForm(f => ({ ...f, room: e.target.value }))}
-                placeholder="Ej: Kall S 3, Pavilion B..." className={inp} />
-            </F>
-            <F label="Descripción *">
+                placeholder="Ej: Kall S 3, Pavilion B..." className={INP_CLS} />
+            </FormField>
+            <FormField label="Descripción *">
               <div className="col-span-2">
                 <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="Describe la incidencia con el máximo detalle..." rows={3}
-                  className={inp + " resize-none"} />
+                  className={INP_CLS + " resize-none"} />
               </div>
-            </F>
-            <F label="Prioridad">
-              <select value={form.severity} onChange={e => setForm(f => ({ ...f, severity: e.target.value }))} className={inp}>
+            </FormField>
+            <FormField label="Prioridad">
+              <select value={form.severity} onChange={e => setForm(f => ({ ...f, severity: e.target.value }))} className={INP_CLS}>
                 <option value="low">Baja</option><option value="medium">Media</option><option value="high">Alta</option>
               </select>
-            </F>
-            <F label="Reportado por">
+            </FormField>
+            <FormField label="Reportado por">
               <input value={form.reporter} onChange={e => setForm(f => ({ ...f, reporter: e.target.value }))}
-                placeholder="Nombre del operario..." className={inp} />
-            </F>
+                placeholder="Nombre del operario..." className={INP_CLS} />
+            </FormField>
           </div>
           <div className="flex gap-3 mt-4">
             <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
@@ -629,6 +640,9 @@ function IncidentsPage({ incidents, setIncidents }) {
                     <option value="in_progress">En gestión</option>
                     <option value="resolved">Resuelta</option>
                   </select>
+                  <button onClick={() => setEditInc({...inc})} className="p-1.5 rounded-lg text-gray-300 hover:text-blue-400 hover:bg-blue-50 transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
                   <button onClick={() => del(inc.id)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors">
                     <Ico.Trash />
                   </button>
@@ -636,6 +650,54 @@ function IncidentsPage({ incidents, setIncidents }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Edit incident modal */}
+      {editInc && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+             onClick={e => e.target === e.currentTarget && setEditInc(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl fade-in">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <h3 className="font-bold text-gray-900">Editar Incidencia</h3>
+              <button onClick={() => setEditInc(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"><Ico.X /></button>
+            </div>
+            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Planta">
+                  <select value={editInc.floor} onChange={e => setEditInc(v => ({...v, floor: +e.target.value}))} className={INP_CLS}>
+                    {FLOORS.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Sala / Zona">
+                  <input value={editInc.room} onChange={e => setEditInc(v => ({...v, room: e.target.value}))} className={INP_CLS} />
+                </FormField>
+                <FormField label="Descripción">
+                  <textarea value={editInc.description} onChange={e => setEditInc(v => ({...v, description: e.target.value}))} rows={3} className={INP_CLS + " resize-none col-span-2"} />
+                </FormField>
+                <FormField label="Prioridad">
+                  <select value={editInc.severity} onChange={e => setEditInc(v => ({...v, severity: e.target.value}))} className={INP_CLS}>
+                    <option value="low">Baja</option><option value="medium">Media</option><option value="high">Alta</option>
+                  </select>
+                </FormField>
+                <FormField label="Estado">
+                  <select value={editInc.status} onChange={e => setEditInc(v => ({...v, status: e.target.value}))} className={INP_CLS}>
+                    <option value="open">Abierta</option><option value="in_progress">En gestión</option><option value="resolved">Resuelta</option>
+                  </select>
+                </FormField>
+                <FormField label="Reportado por">
+                  <input value={editInc.reporter} onChange={e => setEditInc(v => ({...v, reporter: e.target.value}))} className={INP_CLS} />
+                </FormField>
+                <FormField label="Fecha">
+                  <input type="date" value={editInc.date} onChange={e => setEditInc(v => ({...v, date: e.target.value}))} className={INP_CLS} />
+                </FormField>
+              </div>
+            </div>
+            <div className="flex gap-2.5 p-5 border-t border-gray-100">
+              <button onClick={() => setEditInc(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancelar</button>
+              <button onClick={() => saveEdit(editInc)} className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90" style={{ backgroundColor: PN_RED }}>Guardar cambios</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -651,6 +713,7 @@ function LogisticsPage({ logistics, setLogistics }) {
   const [fltExp,   setFltExp]    = useState('');
   const [selected, setSelected]  = useState([]);
   const [bulkLoc,  setBulkLoc]   = useState('');
+  const [editPkg,  setEditPkg]   = useState(null);
   const blank = { reference: '', expedicion: '', description: '', floor: 'all', location: 'kettal', plannedDate: '', plannedLocation: 'ey_building', notes: '' };
   const [form, setForm] = useState(blank);
 
@@ -724,12 +787,16 @@ function LogisticsPage({ logistics, setLogistics }) {
   const applyBulk = () => {
     if (!bulkLoc || selected.length === 0) return;
     persist(logistics.map(l => selected.includes(l.id) ? { ...l, location: bulkLoc } : l));
-    setSelected([]);
-    setBulkLoc('');
+    setSelected([]); setBulkLoc('');
   };
+  const bulkDelete = () => {
+    if (!confirm(`¿Eliminar ${selected.length} paquete(s) seleccionado(s)?`)) return;
+    persist(logistics.filter(l => !selected.includes(l.id)));
+    setSelected([]);
+  };
+  const savePkgEdit = (updated) => { persist(logistics.map(l => l.id === updated.id ? updated : l)); setEditPkg(null); };
 
-  const inp = "w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 transition-all bg-white";
-  const F   = ({ label, children }) => <div><label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">{label}</label>{children}</div>;
+
 
   const isLate = pkg => pkg.plannedDate && new Date(pkg.plannedDate) < new Date() && pkg.location !== 'ey_building';
 
@@ -773,42 +840,42 @@ function LogisticsPage({ logistics, setLogistics }) {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 fade-in">
           <p className="font-semibold text-gray-800 mb-4">Nuevo Paquete / Bulto</p>
           <div className="grid grid-cols-2 gap-4">
-            <F label="Referencia *">
+            <FormField label="Referencia *">
               <input value={form.reference} onChange={e => setForm(f => ({ ...f, reference: e.target.value }))}
-                placeholder="Ej: PKG-001, PAL-A23..." className={inp} />
-            </F>
-            <F label="Nº Expedición">
+                placeholder="Ej: PKG-001, PAL-A23..." className={INP_CLS} />
+            </FormField>
+            <FormField label="Nº Expedición">
               <input value={form.expedicion || ''} onChange={e => setForm(f => ({ ...f, expedicion: e.target.value }))}
-                placeholder="Ej: EXP-2026-047..." className={inp} />
-            </F>
-            <F label="Para la planta">
-              <select value={form.floor} onChange={e => setForm(f => ({ ...f, floor: e.target.value }))} className={inp}>
+                placeholder="Ej: EXP-2026-047..." className={INP_CLS} />
+            </FormField>
+            <FormField label="Para la planta">
+              <select value={form.floor} onChange={e => setForm(f => ({ ...f, floor: e.target.value }))} className={INP_CLS}>
                 <option value="all">General / Todas</option>
                 {FLOORS.map(f => <option key={f.id} value={f.id.toString()}>{f.name}</option>)}
               </select>
-            </F>
-            <F label="Descripción del contenido">
+            </FormField>
+            <FormField label="Descripción del contenido">
               <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Ej: Paneles laterales Kall S, tornillería..." className={inp} />
-            </F>
-            <F label="Ubicación actual">
-              <select value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className={inp}>
+                placeholder="Ej: Paneles laterales Kall S, tornillería..." className={INP_CLS} />
+            </FormField>
+            <FormField label="Ubicación actual">
+              <select value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className={INP_CLS}>
                 {LOCATIONS.map(l => <option key={l.id} value={l.id}>{l.icon} {l.label}</option>)}
               </select>
-            </F>
-            <F label="Destino planificado">
-              <select value={form.plannedLocation} onChange={e => setForm(f => ({ ...f, plannedLocation: e.target.value }))} className={inp}>
+            </FormField>
+            <FormField label="Destino planificado">
+              <select value={form.plannedLocation} onChange={e => setForm(f => ({ ...f, plannedLocation: e.target.value }))} className={INP_CLS}>
                 <option value="cabfreight">CabFreight (Dublin)</option>
                 <option value="ey_building">EY Building (Site)</option>
               </select>
-            </F>
-            <F label="Fecha prevista entrega">
-              <input type="date" value={form.plannedDate} onChange={e => setForm(f => ({ ...f, plannedDate: e.target.value }))} className={inp} />
-            </F>
-            <F label="Notas">
+            </FormField>
+            <FormField label="Fecha prevista entrega">
+              <input type="date" value={form.plannedDate} onChange={e => setForm(f => ({ ...f, plannedDate: e.target.value }))} className={INP_CLS} />
+            </FormField>
+            <FormField label="Notas">
               <input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                placeholder="Observaciones adicionales..." className={inp} />
-            </F>
+                placeholder="Observaciones adicionales..." className={INP_CLS} />
+            </FormField>
           </div>
           <div className="flex gap-3 mt-4">
             <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
@@ -851,6 +918,10 @@ function LogisticsPage({ logistics, setLogistics }) {
             className="px-4 py-1.5 rounded-lg text-white text-sm font-semibold disabled:opacity-40 transition-opacity hover:opacity-90"
             style={{ backgroundColor: PN_RED }}>
             Aplicar
+          </button>
+          <button onClick={bulkDelete}
+            className="px-4 py-1.5 rounded-lg text-white text-sm font-semibold bg-red-500 hover:bg-red-600 transition-colors">
+            🗑 Eliminar
           </button>
           <button onClick={() => setSelected([])} className="text-xs text-gray-400 hover:text-gray-600 ml-auto">
             Deseleccionar
@@ -920,9 +991,14 @@ function LogisticsPage({ logistics, setLogistics }) {
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <button onClick={() => del(pkg.id)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors">
-                        <Ico.Trash />
-                      </button>
+                      <div className="flex gap-1">
+                        <button onClick={() => setEditPkg({...pkg})} className="p-1.5 rounded-lg text-gray-300 hover:text-blue-400 hover:bg-blue-50 transition-colors">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button onClick={() => del(pkg.id)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors">
+                          <Ico.Trash />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
