@@ -557,19 +557,28 @@ function IncidentsPage({ incidents, setIncidents }) {
   const [form, setForm] = useState(blankForm);
 
 
-  const add = () => {
+  const add = async () => {
     if (!form.description.trim()) return;
-    persist([...incidents, { ...form, id: Date.now().toString(), floor: +form.floor }]);
+    const inc = { ...form, id: Date.now().toString(), floor: +form.floor };
+    setIncidents(p => [...p, inc]);
+    await DB.from('incidents').insert(inc);
     setForm(blankForm); setShowForm(false);
   };
-  const del     = id  => { if (confirm('Delete this incident?')) persist(incidents.filter(i => i.id !== id)); };
+  const del = async (id) => {
+    if (!confirm('Delete this incident?')) return;
+    setIncidents(p => p.filter(i => i.id !== id));
+    await DB.from('incidents').delete().eq('id', id);
+  };
   const saveEdit = async (updated) => {
     setIncidents(p => p.map(i => i.id === updated.id ? updated : i));
     const { id, ...fields } = updated;
     await DB.from('incidents').update(fields).eq('id', id);
     setEditInc(null);
   };
-  const setStatus = (id, s) => persist(incidents.map(i => i.id === id ? { ...i, status: s } : i));
+  const setStatus = async (id, s) => {
+    setIncidents(p => p.map(i => i.id === id ? { ...i, status: s } : i));
+    await DB.from('incidents').update({ status: s }).eq('id', id);
+  };
 
   const list = [...incidents]
     .filter(i => fltStatus === 'all' || i.status === fltStatus)
@@ -582,7 +591,7 @@ function IncidentsPage({ incidents, setIncidents }) {
     <div className="p-7 space-y-6 fade-in">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-gray-500 text-sm">{incidents.filter(i => i.status !== 'resolved').length} abiertas · {incidents.filter(i => i.status === 'resolved').length} resueltas</p>
+          <p className="text-gray-500 text-sm">{incidents.filter(i => i.status !== 'resolved').length} open · {incidents.filter(i => i.status === 'resolved').length} resolved</p>
         </div>
         <button onClick={() => setShowForm(v => !v)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity"
@@ -602,7 +611,7 @@ function IncidentsPage({ incidents, setIncidents }) {
             </FormField>
             <FormField label="Room / Area">
               <input value={form.room} onChange={e => setForm(f => ({ ...f, room: e.target.value }))}
-                placeholder="Ej: Kall S 3, Pavilion B..." className={INP_CLS} />
+                placeholder="e.g. Kall S 3, Pavilion B..." className={INP_CLS} />
             </FormField>
             <FormField label="Description *">
               <div className="col-span-2">
@@ -611,14 +620,14 @@ function IncidentsPage({ incidents, setIncidents }) {
                   className={INP_CLS + " resize-none"} />
               </div>
             </FormField>
-            <FormField label="Prioridad">
+            <FormField label="Priority">
               <select value={form.severity} onChange={e => setForm(f => ({ ...f, severity: e.target.value }))} className={INP_CLS}>
                 <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
               </select>
             </FormField>
             <FormField label="Reported by">
               <input value={form.reporter} onChange={e => setForm(f => ({ ...f, reporter: e.target.value }))}
-                placeholder="Nombre del operario..." className={INP_CLS} />
+                placeholder="Operator name..." className={INP_CLS} />
             </FormField>
           </div>
           <div className="flex gap-3 mt-4">
@@ -703,7 +712,7 @@ function IncidentsPage({ incidents, setIncidents }) {
                 <FormField label="Description">
                   <textarea value={editInc.description} onChange={e => setEditInc(v => ({...v, description: e.target.value}))} rows={3} className={INP_CLS + " resize-none col-span-2"} />
                 </FormField>
-                <FormField label="Prioridad">
+                <FormField label="Priority">
                   <select value={editInc.severity} onChange={e => setEditInc(v => ({...v, severity: e.target.value}))} className={INP_CLS}>
                     <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
                   </select>
