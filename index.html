@@ -865,8 +865,8 @@ function LogisticsPage({ logistics, setLogistics }) {
           <p className="text-gray-400">Sin paquetes registrados</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+          <table className="text-sm" style={{minWidth:"900px"}}>
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="px-4 py-3 w-10">
