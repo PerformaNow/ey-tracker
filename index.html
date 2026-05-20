@@ -158,6 +158,23 @@ function Badge({ cls, label }) {
   return <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>{label}</span>;
 }
 
+// ─── Toast notification ──────────────────────────────────────────────────────
+function useToast() {
+  const [toast, setToast] = React.useState(null);
+  const show = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+  const Toast = toast ? (
+    <div className={`fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold flex items-center gap-2 fade-in ${
+      toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-gray-900 text-white'
+    }`}>
+      {toast.type === 'error' ? '⚠️' : '✅'} {toast.msg}
+    </div>
+  ) : null;
+  return { show, Toast };
+}
+
 // ─── Room Modal ───────────────────────────────────────────────────────────────
 function RoomModal({ room, rs, onSave, onClose }) {
   const [s, setS] = useState({ ...rs });
@@ -804,6 +821,7 @@ function IncidentsPage({ incidents, setIncidents }) {
 
 // ─── Logistics Page ───────────────────────────────────────────────────────────
 function LogisticsPage({ logistics, setLogistics }) {
+  const { show: toast, Toast } = useToast();
   const [showForm,  setShowForm]  = useState(false);
   const [fltLoc,   setFltLoc]    = useState('all');
   const [fltFloor, setFltFloor]  = useState('all');
@@ -851,8 +869,9 @@ function LogisticsPage({ logistics, setLogistics }) {
         });
         if (newItems.length === 0) { alert('No valid rows found. Make sure the "Referencia" column is filled in.'); return; }
         setLogistics(p => [...p, ...newItems]);
-        await DB.from('logistics').insert(newItems.map(logisticToDB));
-        alert(`✅ ${newItems.length} package(s) imported successfully.`);
+        const { error: insErr } = await DB.from('logistics').insert(newItems.map(logisticToDB));
+        if (insErr) { toast(`Save error: ${insErr.message}`, 'error'); return; }
+        toast(`${newItems.length} package(s) imported and saved.`);
         e.target.value = '';
       } catch(err) {
         alert('Error al leer el Excel. Asegúrate de que el formato es correcto.');
@@ -863,8 +882,10 @@ function LogisticsPage({ logistics, setLogistics }) {
   const add = async () => {
     if (!form.reference.trim()) return;
     const pkg = { ...form, id: Date.now().toString() };
+    const { error: insErr } = await DB.from('logistics').insert(logisticToDB(pkg));
+    if (insErr) { toast(`Save error: ${insErr.message}`, 'error'); return; }
     setLogistics(p => [...p, pkg]);
-    await DB.from('logistics').insert(logisticToDB(pkg));
+    toast('Package saved.');
     setForm(blank); setShowForm(false);
   };
   const del = async (id) => {
